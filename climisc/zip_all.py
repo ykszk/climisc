@@ -88,15 +88,17 @@ def main():
         return 1
 
     glob_pattern = os.sep.join(['*'] * args.depth + ['*'])
-    entries = list(indir.glob(glob_pattern))
+    entries = sorted(indir.glob(glob_pattern))
     logger.info('Zip {} entries.'.format(len(entries)))
 
+    logger.info('Create directories')
     zip_args = []
     for entry in entries:
         output_filename = outdir / entry.relative_to(indir).with_suffix('.zip')
         output_filename.parent.mkdir(exist_ok=True, parents=True)
         zip_args.append((entry, output_filename, args.cl))
 
+    logger.info('Start jobs')
     Parallel(n_jobs=n_jobs)(delayed(zip_entry)(*arg)
                             for arg in tqdm.tqdm(zip_args))
     logger.info('Done')
