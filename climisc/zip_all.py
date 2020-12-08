@@ -27,6 +27,9 @@ def zip_directory(input_path, output_filename, compresslevel):
 
 
 def zip_file(input_path, output_filename, compresslevel):
+    if input_path.suffix == '.zip':
+        shutil.copy(input_path, output_filename)
+        return 0
     with zipfile.ZipFile(output_filename,
                          "w",
                          zipfile.ZIP_DEFLATED,
@@ -75,6 +78,12 @@ def main():
                         help="Delete original entries",
                         action='store_true')
 
+    parser.add_argument(
+        '--zipfiles',
+        help=
+        "Enable zipping file entries. Only directories are zipped by default.",
+        action='store_true')
+
     args = parser.parse_args()
 
     indir = Path(args.input)
@@ -94,7 +103,9 @@ def main():
     logger.info('Create directories')
     zip_args = []
     for entry in entries:
-        output_filename = outdir / entry.relative_to(indir).with_suffix('.zip')
+        if not args.zipfiles and entry.is_file():
+            continue
+        output_filename = outdir / (str(entry.relative_to(indir)) + ('.zip'))
         output_filename.parent.mkdir(exist_ok=True, parents=True)
         zip_args.append((entry, output_filename, args.cl))
 
