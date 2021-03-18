@@ -51,7 +51,12 @@ def main():
     parser = argparse.ArgumentParser(
         description='Zip all entries in the input directory.')
     parser.add_argument('input', help="Input directory", metavar='<input>')
-    parser.add_argument('output', help="Output directory", metavar='<output>')
+    parser.add_argument(
+        'output',
+        help=
+        "(Optional) Output directory. Use input directory as output directory by default.",
+        nargs='?',
+        metavar='<output>')
 
     parser.add_argument('-j',
                         '--jobs',
@@ -87,6 +92,7 @@ def main():
     args = parser.parse_args()
 
     indir = Path(args.input)
+    args.output = args.output if args.output else args.input
     outdir = Path(args.output)
     n_jobs = args.jobs if args.jobs != 0 else -1
     if not indir.exists():
@@ -98,13 +104,13 @@ def main():
 
     glob_pattern = os.sep.join(['*'] * args.depth + ['*'])
     entries = sorted(indir.glob(glob_pattern))
+    if not args.zipfiles:
+        entries = [e for e in entries if e.is_dir()]
     logger.info('Zip {} entries.'.format(len(entries)))
 
     logger.info('Create directories')
     zip_args = []
     for entry in entries:
-        if not args.zipfiles and entry.is_file():
-            continue
         output_filename = outdir / (str(entry.relative_to(indir)) + ('.zip'))
         output_filename.parent.mkdir(exist_ok=True, parents=True)
         zip_args.append((entry, output_filename, args.cl))
@@ -116,8 +122,11 @@ def main():
 
     if args.delete:
         logger.info('Delete {} entries'.format(len(entries)))
-        for e in entries:
-            shutil.rmtree(e)
+        for e in tqdm.tqdm(entries):
+            if e.is_dir():
+                shutil.rmtree(e)
+            else:
+                os.remove(e)
         logger.info('Done')
 
 
